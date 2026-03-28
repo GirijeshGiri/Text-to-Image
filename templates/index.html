@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt2Pixel — AI Image Studio</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/icon.png') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet" />
+  <style>
+    /* ══════════════════════════════════════════
+       CSS VARIABLES — DARK (Deep Burgundy + Golden Sand)
+    ══════════════════════════════════════════ */
+    :root,
+    [data-theme="dark"] {
+      --bg:            #0a0a0f;
+      --surface:       #111111;
+      --surface2:      #1a0d0f;
+      --border:        rgba(241, 225, 148, 0.15);
+      --border-strong: rgba(241, 225, 148, 0.4);
+      --primary:       #5B0E14;
+      --primary-hover: #7a1c24;
+      --accent:        #F1E194;      /* Golden Sand */
+      --accent2:       #c8ab4e;
+      --text:          #ffffff;
+      --muted:         #b6b6ba;
+      --success:       #10b981;
+      --error:         #ef4444;
+      --radius:        12px;
+      --glow:          0 0 20px rgba(241, 225, 148, 0.18);
+      --glow-strong:   0 0 35px rgba(241, 225, 148, 0.30);
+      --logo-from:     #F1E194;
+      --logo-to:       #c8ab4e;
+    }
+
+    /* ── LIGHT theme overrides ────────────────── */
+    [data-theme="light"] {
+      --bg:            #faf8f0;
+      --surface:       #ffffff;
+      --surface2:      #fff8e7;
+      --border:        rgba(91, 14, 20, 0.18);
+      --border-strong: rgba(91, 14, 20, 0.5);
+      --primary:       #5B0E14;
+      --primary-hover: #7a1c24;
+      --accent:        #5B0E14;
+      --accent2:       #7a1c24;
+      --text:          #1a0a0c;
+      --muted:         #7a6060;
+      --success:       #059669;
+      --error:         #dc2626;
+      --glow:          0 0 20px rgba(91, 14, 20, 0.12);
+      --glow-strong:   0 0 35px rgba(91, 14, 20, 0.22);
+      --logo-from:     #5B0E14;
+      --logo-to:       #7a1c24;
+    }
+
+    /* ── All elements transition theme smoothly ── */
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s, box-shadow 0.3s;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ══════════════════════════════════════════
+       NAVBAR
+    ══════════════════════════════════════════ */
+    nav {
+      position: sticky; top: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 2rem;
+      background: rgba(10, 10, 15, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(241, 225, 148, 0.1);
+    }
+    [data-theme="light"] nav {
+      background: rgba(250, 248, 240, 0.93);
+      border-bottom: 1px solid rgba(91, 14, 20, 0.15);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.3rem;
+      letter-spacing: -0.02em;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--logo-from), var(--logo-to));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      flex-shrink: 0;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 0.5rem; }
+
+    .nav-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.45rem 0.85rem;
+      border-radius: 7px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(91, 14, 20, 0.12); }
+    .nav-link.active {
+      color: var(--accent);
+      background: rgba(91, 14, 20, 0.2);
+      border: 1px solid var(--border-strong);
+    }
+
+    .nav-right { display: flex; align-items: center; gap: 0.6rem; }
+    .nav-username { font-size: 0.72rem; color: var(--accent); letter-spacing: 0.06em; }
+
+    .btn-logout {
+      font-family: 'DM Mono', monospace; font-size: 0.72rem;
+      color: var(--muted); background: none;
+      border: 1px solid var(--border); border-radius: 6px;
+      padding: 0.35rem 0.7rem; cursor: pointer; text-decoration: none;
+      transition: all 0.2s; letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .btn-logout:hover { color: var(--error); border-color: var(--error); }
+
+    /* ── Theme Toggle Button ──────────────────── */
+    .btn-theme {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.35rem 0.55rem;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      transition: all 0.2s;
+      color: var(--muted);
+    }
+    .btn-theme:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Hamburger */
+    .hamburger {
+      display: none; flex-direction: column; justify-content: center;
+      gap: 5px; background: none; border: none; cursor: pointer;
+      padding: 6px; border-radius: 6px;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--muted); border-radius: 2px; transition: all 0.3s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .mobile-menu {
+      display: none; flex-direction: column; gap: 0.25rem;
+      padding: 1rem 1.5rem 1.25rem;
+      background: rgba(10, 10, 15, 0.97);
+      border-bottom: 1px solid var(--border);
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 199;
+    }
+    [data-theme="light"] .mobile-menu { background: rgba(250, 248, 240, 0.98); }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu .nav-link { padding: 0.65rem 0.85rem; font-size: 0.85rem; }
+
+    /* ══════════════════════════════════════════
+       HERO
+    ══════════════════════════════════════════ */
+    .hero {
+      text-align: center;
+      padding: 4rem 1.5rem 2rem;
+      position: relative;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 500px; height: 260px;
+      background: radial-gradient(ellipse, rgba(91, 14, 20, 0.28) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--border-strong);
+      background: rgba(91, 14, 20, 0.15);
+      padding: 0.3rem 1rem; border-radius: 999px; margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(2.2rem, 6vw, 4.5rem);
+      line-height: 1.08; letter-spacing: -0.02em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero p { color: var(--muted); font-size: 0.9rem; margin-top: 1rem; max-width: 400px; margin-inline: auto; line-height: 1.7; }
+
+    /* ══════════════════════════════════════════
+       STUDIO CARD
+    ══════════════════════════════════════════ */
+    .studio { max-width: 780px; margin: 2.5rem auto; padding: 0 1.5rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2rem;
+      box-shadow: var(--glow);
+    }
+
+    label {
+      display: block; font-size: 0.72rem;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.5rem;
+    }
+
+    .prompt-row { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+
+    textarea, input[type="text"], select {
+      font-family: 'DM Mono', monospace; font-size: 0.85rem;
+      color: var(--text); background: var(--surface);
+      border: 1px solid var(--primary);
+      border-radius: 8px; padding: 0.75rem 1rem;
+      width: 100%; resize: none;
+      transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+    }
+    textarea:focus, input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px rgba(241, 225, 148, 0.25);
+    }
+    [data-theme="light"] textarea,
+    [data-theme="light"] input[type="text"],
+    [data-theme="light"] select {
+      background: #fff; border-color: var(--primary);
+      box-shadow: none;
+    }
+    [data-theme="light"] textarea:focus,
+    [data-theme="light"] input[type="text"]:focus,
+    [data-theme="light"] select:focus {
+      border-color: var(--primary-hover);
+      box-shadow: 0 0 8px rgba(91, 14, 20, 0.2);
+    }
+
+    #prompt-input { flex: 1; min-height: 90px; }
+
+    select {
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235B0E14' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+      padding-right: 36px; cursor: pointer;
+    }
+    select option { background: var(--surface); }
+
+    /* ── Improve Prompt Button ────────────────── */
+    .btn-improve {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 0.3rem;
+      padding: 0.5rem 0.75rem;
+      background: linear-gradient(135deg, rgba(91,14,20,0.25), rgba(122,28,36,0.18));
+      border: 1px solid rgba(241, 225, 148, 0.3);
+      border-radius: 8px; color: var(--accent);
+      font-family: 'DM Mono', monospace; font-size: 0.7rem;
+      cursor: pointer; transition: all 0.2s;
+      min-width: 80px; white-space: nowrap;
+    }
+    .btn-improve:hover {
+      background: linear-gradient(135deg, rgba(91,14,20,0.5), rgba(122,28,36,0.4));
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: var(--glow);
+    }
+    .btn-improve .sparkle { font-size: 1.2rem; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+
+    /* ══════════════════════════════════════════
+       PROMPT SUGGESTIONS DROPDOWN
+    ══════════════════════════════════════════ */
+    .prompt-wrapper { position: relative; flex: 1; }
+
+    .suggestions-box {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0; right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px;
+      box-shadow: var(--glow-strong);
+      z-index: 100;
+      overflow: hidden;
+    }
+    .suggestions-box.open { display: block; }
+
+    .suggestion-item {
+      padding: 0.65rem 1rem;
+      font-size: 0.78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover { background: rgba(91,14,20,0.2); color: var(--accent); }
+
+    /* ══════════════════════════════════════════
+       IMAGE SETTINGS PANEL
+    ══════════════════════════════════════════ */
+    .settings-toggle {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--muted); cursor: pointer; user-select: none;
+      margin-bottom: 0.85rem; margin-top: 0.25rem;
+      width: fit-content;
+    }
+    .settings-toggle:hover { color: var(--accent); }
+    .settings-toggle .arrow { transition: transform 0.25s; display: inline-block; }
+    .settings-toggle.open .arrow { transform: rotate(90deg); }
+
+    .settings-panel {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      /* Special highlight section — deep burgundy tint */
+      background: rgba(91, 14, 20, 0.1);
+      border-color: rgba(241, 225, 148, 0.2);
+    }
+    .settings-panel.open { display: block; }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .settings-group label { color: var(--accent); font-size: 0.68rem; }
+
+    .settings-group .value-display {
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: bold;
+      margin-left: 0.4rem;
+    }
+
+    /* Range slider — styled in burgundy/gold */
+    input[type="range"] {
+      width: 100%; height: 4px;
+      background: var(--border);
+      border-radius: 2px; border: none;
+      padding: 0; cursor: pointer;
+      accent-color: var(--primary);
+      margin-top: 0.5rem;
+    }
+    input[type="range"]:focus { box-shadow: none; }
+
+    /* ══════════════════════════════════════════
+       ACTION BUTTONS
+    ══════════════════════════════════════════ */
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    .btn {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 0.85rem 1.25rem; border-radius: 8px; border: none;
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+
+    /* Primary — Deep Burgundy gradient, Golden text */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      color: var(--accent);
+      grid-column: 1 / -1;
+      box-shadow: var(--glow);
+      letter-spacing: 0.1em;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 0 25px rgba(241, 225, 148, 0.3);
+    }
+    .btn-primary:active { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-variations {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .btn-variations:hover { border-color: var(--accent); color: var(--accent); }
+
+    .btn-gallery {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      text-decoration: none; text-align: center;
+    }
+    .btn-gallery:hover { border-color: var(--success); color: var(--success); }
+
+    /* ── Status ───────────────────────────────── */
+    #status {
+      margin-top: 1.25rem; font-size: 0.8rem;
+      text-align: center; min-height: 1.2rem; color: var(--muted);
+    }
+    #status.error   { color: var(--error); }
+    #status.success { color: var(--success); }
+    #status.loading { color: var(--accent); }
+
+    /* ══════════════════════════════════════════
+       RESULT IMAGE + SHARE BAR
+    ══════════════════════════════════════════ */
+    #result-area { margin-top: 1.5rem; display: none; }
+
+    #result-img {
+      width: 100%; border-radius: var(--radius);
+      border: 1px solid var(--border-strong);
+      animation: fadeIn 0.4s ease;
+      box-shadow: var(--glow);
+      display: block;
+    }
+
+    .share-bar { display: flex; gap: 0.6rem; margin-top: 0.85rem; flex-wrap: wrap; }
+
+    .btn-share {
+      flex: 1; min-width: 110px;
+      font-family: 'DM Mono', monospace; font-size: 0.75rem;
+      letter-spacing: 0.06em; padding: 0.55rem 0.85rem;
+      border-radius: 7px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+      text-decoration: none;
+    }
+    .btn-share:hover  { border-color: var(--accent); color: var(--accent); }
+    .btn-share.copied { border-color: var(--success); color: var(--success); }
+
+    /* ══════════════════════════════════════════
+       VARIATIONS
+    ══════════════════════════════════════════ */
+    #variations-area { margin-top: 1.5rem; display: none; }
+    #variations-area h3 {
+      font-family: 'Syne', sans-serif; font-size: 0.9rem;
+      margin-bottom: 1rem; color: var(--accent);
+      letter-spacing: 0.1em; text-transform: uppercase;
+    }
+    .variations-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    .variation-item img {
+      width: 100%; border-radius: 8px;
+      border: 1px solid var(--border-strong);
+      animation: fadeIn 0.4s ease;
+    }
+    .variation-label { font-size: 0.68rem; color: var(--muted); text-align: center; margin-top: 0.3rem; }
+
+    /* ══════════════════════════════════════════
+       RECENT HISTORY
+    ══════════════════════════════════════════ */
+    .history-section { max-width: 780px; margin: 2rem auto; padding: 0 1.5rem 4rem; }
+
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+
+    .section-title {
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 1rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--accent);
+    }
+
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0.75rem; }
+
+    .history-card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid rgba(241, 225, 148, 0.15);
+      border-radius: 8px; overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+    .history-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 0 25px rgba(241, 225, 148, 0.2);
+    }
+    .history-card img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+    .history-meta { padding: 0.5rem 0.6rem; }
+    .history-prompt { font-size: 0.68rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.2rem; }
+    .history-style { font-size: 0.6rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; }
+    .history-time { font-size: 0.6rem; color: var(--muted); margin-top: 0.15rem; }
+
+    /* Delete button */
+    .btn-delete-card {
+      position: absolute; top: 6px; right: 6px;
+      background: rgba(10, 10, 15, 0.75);
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      color: var(--error); border-radius: 6px;
+      width: 26px; height: 26px; font-size: 0.8rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.2s; z-index: 10;
+    }
+    .history-card:hover .btn-delete-card { opacity: 1; }
+
+    /* ══════════════════════════════════════════
+       TOAST
+    ══════════════════════════════════════════ */
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 8px; color: var(--text);
+      font-size: 0.8rem; padding: 0.65rem 1.25rem;
+      z-index: 999; opacity: 0;
+      transition: transform 0.3s, opacity 0.3s;
+      white-space: nowrap; box-shadow: var(--glow);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ══════════════════════════════════════════
+       SPINNER & ANIMATIONS
+    ══════════════════════════════════════════ */
+    .spinner {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(241,225,148,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite; vertical-align: middle;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    @keyframes spin   { to { transform: rotate(360deg); } }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 1024px) { .studio, .history-section { max-width: 680px; } }
+
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .nav-links  { display: none; }
+      nav         { padding: 0.85rem 1.25rem; position: relative; }
+      .hero { padding: 2.5rem 1.25rem 1.5rem; }
+      .studio, .history-section { padding: 0 1rem; }
+      .card { padding: 1.25rem; }
+      .form-row  { grid-template-columns: 1fr; }
+      .actions   { grid-template-columns: 1fr; }
+      .btn-primary { grid-column: auto; }
+      .prompt-row { flex-direction: column; }
+      .btn-improve { flex-direction: row; min-width: 100%; justify-content: center; padding: 0.65rem; }
+      .variations-grid { grid-template-columns: 1fr 1fr; }
+      .history-grid { grid-template-columns: repeat(2, 1fr); }
+      .settings-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+      .btn-delete-card { opacity: 1; }
+      .nav-username { display: none; }
+      .share-bar { gap: 0.4rem; }
+      .btn-share { font-size: 0.7rem; padding: 0.5rem 0.6rem; }
+    }
+
+    @media (max-width: 420px) {
+      .history-grid { grid-template-columns: 1fr 1fr; }
+      .variations-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2rem; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════════ -->
+  <nav>
+    <a href="/" class="nav-logo">✦ Prompt2Pixel</a>
+
+    <div class="nav-links">
+      <a href="/" class="nav-link active">Studio</a>
+      <a href="/gallery" class="nav-link">Gallery</a>
+    </div>
+
+    <div class="nav-right">
+      <span class="nav-username">👤 {{ user }}</span>
+      <!-- Theme toggle -->
+      <button class="btn-theme" id="theme-toggle" title="Toggle theme" onclick="toggleTheme()">🌙</button>
+      <a href="/logout" class="btn-logout">Logout</a>
+    </div>
+
+    <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="/" class="nav-link active">Studio</a>
+    <a href="/gallery" class="nav-link">Gallery</a>
+    <a href="/logout" class="nav-link" style="color:var(--error)">Logout</a>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-badge">✦ AI Image Studio</div>
+    <h1>Turn words into<br /><span>images</span></h1>
+    <p>Describe anything. Our AI renders it in seconds.</p>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STUDIO
+  ══════════════════════════════════════════ -->
+  <div class="studio">
+    <div class="card">
+
+      <!-- Prompt + Suggestions -->
+      <label for="prompt-input">Prompt</label>
+      <div class="prompt-row">
+        <!-- Wrapper needed for suggestions dropdown positioning -->
+        <div class="prompt-wrapper">
+          <textarea id="prompt-input"
+                    placeholder="a lone lighthouse on a rocky cliff at sunset..."
+                    autocomplete="off"></textarea>
+          <!-- Suggestions dropdown -->
+          <div class="suggestions-box" id="suggestions-box"></div>
+        </div>
+        <button class="btn-improve" id="improve-btn" onclick="improvePrompt()" title="Improve with AI">
+          <span class="sparkle">✨</span>
+          <span>Improve<br/>Prompt</span>
+        </button>
+      </div>
+
+      <!-- Style + Negative Prompt -->
+      <div class="form-row">
+        <div>
+          <label for="style-select">Style</label>
+          <select id="style-select">
+            <option value="realistic">Realistic</option>
+            <option value="anime">Anime</option>
+            <option value="sketch">Sketch</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="cinematic">Cinematic</option>
+          </select>
+        </div>
+        <div>
+          <label for="negative-input">Negative Prompt</label>
+          <input id="negative-input" type="text" placeholder="blur, low quality, watermark..." />
+        </div>
+      </div>
+
+      <!-- ══ Image Settings Panel ══ -->
+      <div class="settings-toggle" id="settings-toggle" onclick="toggleSettings()">
+        <span class="arrow">▶</span>
+        <span>Image Settings</span>
+      </div>
+
+      <div class="settings-panel" id="settings-panel">
+        <div class="settings-grid">
+
+          <!-- Image Size -->
+          <div class="settings-group">
+            <label for="img-size">Image Size</label>
+            <select id="img-size">
+              <option value="512" selected>512 × 512</option>
+              <option value="768">768 × 768</option>
+              <option value="1024">1024 × 1024</option>
+            </select>
+          </div>
+
+          <!-- CFG Scale -->
+          <div class="settings-group">
+            <label for="cfg-scale">
+              CFG Scale <span class="value-display" id="cfg-val">7</span>
+            </label>
+            <input type="range" id="cfg-scale" min="1" max="10" step="0.5" value="7"
+                   oninput="document.getElementById('cfg-val').textContent = this.value" />
+          </div>
+
+          <!-- Steps -->
+          <div class="settings-group">
+            <label for="steps-range">
+              Steps <span class="value-display" id="steps-val">30</span>
+            </label>
+            <input type="range" id="steps-range" min="10" max="50" step="5" value="30"
+                   oninput="document.getElementById('steps-val').textContent = this.value" />
+          </div>
+
+        </div>
+      </div>
+      <!-- ══ End Settings Panel ══ -->
+
+      <!-- Action Buttons -->
+      <div class="actions">
+        <button class="btn btn-primary" id="generate-btn">
+          <span id="gen-icon">⚡</span>
+          <span id="gen-label">Generate Image</span>
+        </button>
+        <button class="btn btn-variations" id="variations-btn">
+          🎲 Generate Variations (×3)
+        </button>
+        <a href="/gallery" class="btn btn-gallery">🖼 View Gallery</a>
+      </div>
+
+      <!-- Status -->
+      <div id="status"></div>
+
+      <!-- Single Result + Share Bar -->
+      <div id="result-area">
+        <img id="result-img" src="" alt="Generated image" />
+        <div class="share-bar">
+          <a id="btn-download" class="btn-share" download="prompt2pixel.png" href="#">⬇ Download</a>
+          <button class="btn-share" id="btn-copy-link" onclick="copyLink()">🔗 Copy Link</button>
+          <button class="btn-share" id="btn-share" onclick="shareImage()">↗ Share</button>
+        </div>
+      </div>
+
+      <!-- Variations Result -->
+      <div id="variations-area">
+        <h3>✦ Variations</h3>
+        <div class="variations-grid" id="variations-grid"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       RECENT HISTORY
+  ══════════════════════════════════════════ -->
+  {% if history %}
+  <div class="history-section">
+    <div class="section-header">
+      <div class="section-title">Recent Creations</div>
+      <a href="/gallery" style="font-size:0.75rem; color:var(--muted); text-decoration:none;">View all →</a>
+    </div>
+    <div class="history-grid">
+      {% for item in history[:8] %}
+      <div class="history-card" id="card-{{ loop.index }}"
+           onclick="reusePrompt('{{ item.prompt | replace("'", "\\'") }}', '{{ item.style }}')">
+        <button class="btn-delete-card"
+                onclick="deleteImage(event, '{{ item.image_url }}', 'card-{{ loop.index }}')"
+                title="Delete">🗑</button>
+        <img src="{{ item.image_url }}" alt="{{ item.prompt }}" loading="lazy"
+             onerror="this.style.display='none'" />
+        <div class="history-meta">
+          <div class="history-prompt" title="{{ item.prompt }}">{{ item.prompt }}</div>
+          <div class="history-style">{{ item.style }}</div>
+          <div class="history-time">{{ item.timestamp }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ══════════════════════════════════════════
+       JAVASCRIPT
+  ══════════════════════════════════════════ -->
+  <script>
+    // ══════════════════════════════════════════
+    // THEME TOGGLE — persisted in localStorage
+    // ══════════════════════════════════════════
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙' : '☀️';
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const next    = current === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('p2p-theme', next);
+      applyTheme(next);
+    }
+
+    // Apply saved theme immediately on load (before paint)
+    (function () {
+      const saved = localStorage.getItem('p2p-theme') || 'dark';
+      applyTheme(saved);
+    })();
+
+    // ══════════════════════════════════════════
+    // SETTINGS PANEL TOGGLE
+    // ══════════════════════════════════════════
+    function toggleSettings() {
+      document.getElementById('settings-toggle').classList.toggle('open');
+      document.getElementById('settings-panel').classList.toggle('open');
+    }
+
+    // ══════════════════════════════════════════
+    // HAMBURGER
+    // ══════════════════════════════════════════
+    const hamburger  = document.getElementById('hamburger');
+    const mobileMenu = document.getElementById('mobile-menu');
+    hamburger.addEventListener('click', () => {
+      hamburger.classList.toggle('open');
+      mobileMenu.classList.toggle('open');
+    });
+    mobileMenu.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        hamburger.classList.remove('open');
+        mobileMenu.classList.remove('open');
+      });
+    });
+
+    // ══════════════════════════════════════════
+    // PROMPT SUGGESTIONS
+    // ══════════════════════════════════════════
+    const promptInput    = document.getElementById('prompt-input');
+    const suggestionsBox = document.getElementById('suggestions-box');
+
+    let suggestTimeout = null;
+
+    promptInput.addEventListener('focus', () => fetchSuggestions());
+    promptInput.addEventListener('input', () => {
+      clearTimeout(suggestTimeout);
+      suggestTimeout = setTimeout(fetchSuggestions, 300);
+    });
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.prompt-wrapper')) {
+        suggestionsBox.classList.remove('open');
+      }
+    });
+
+    async function fetchSuggestions() {
+      const partial = promptInput.value.trim();
+      try {
+        const res  = await fetch('/suggest-prompts', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ partial }),
+        });
+        const data = await res.json();
+        if (data.suggestions && data.suggestions.length) {
+          renderSuggestions(data.suggestions);
+        }
+      } catch { /* silently fail */ }
+    }
+
+    function renderSuggestions(items) {
+      suggestionsBox.innerHTML = '';
+      items.forEach(text => {
+        const div = document.createElement('div');
+        div.className = 'suggestion-item';
+        div.textContent = text;
+        div.addEventListener('click', () => {
+          promptInput.value = text;
+          suggestionsBox.classList.remove('open');
+          promptInput.focus();
+        });
+        suggestionsBox.appendChild(div);
+      });
+      suggestionsBox.classList.add('open');
+    }
+
+    // ══════════════════════════════════════════
+    // HELPERS
+    // ══════════════════════════════════════════
+    const styleSelect    = document.getElementById('style-select');
+    const negativeInput  = document.getElementById('negative-input');
+    const statusEl       = document.getElementById('status');
+    const resultArea     = document.getElementById('result-area');
+    const resultImg      = document.getElementById('result-img');
+    const variationsArea = document.getElementById('variations-area');
+    const variationsGrid = document.getElementById('variations-grid');
+    const genBtn         = document.getElementById('generate-btn');
+    const genLabel       = document.getElementById('gen-label');
+    const genIcon        = document.getElementById('gen-icon');
+
+    let currentImageUrl = '';
+
+    function setStatus(msg, type = '') { statusEl.textContent = msg; statusEl.className = type; }
+
+    function setGenerating(loading) {
+      genBtn.disabled      = loading;
+      genIcon.innerHTML    = loading ? '<span class="spinner"></span>' : '⚡';
+      genLabel.textContent = loading ? 'Generating…' : 'Generate Image';
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+
+    // ══════════════════════════════════════════
+    // REAL CLICK SOUND — your WhatsApp audio
+    // ══════════════════════════════════════════
+    function playClickSound() {
+      try {
+        var audio = document.getElementById('click-sound');
+        audio.currentTime = 0;
+        var p = audio.play();
+        if (p && p.catch) p.catch(function() {});
+      } catch(e) {}
+    }
+
+    // Helper: read settings values
+    function getSettings() {
+      return {
+        img_size:  document.getElementById('img-size').value,
+        cfg_scale: document.getElementById('cfg-scale').value,
+        steps:     document.getElementById('steps-range').value,
+      };
+    }
+
+    // ══════════════════════════════════════════
+    // IMPROVE PROMPT
+    // ══════════════════════════════════════════
+    document.getElementById('improve-btn').addEventListener('click', async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) { setStatus('Enter a prompt first!', 'error'); return; }
+      const btn = document.getElementById('improve-btn');
+      btn.disabled = true;
+      btn.querySelector('span:last-child').innerHTML = 'Working…';
+      setStatus('✨ Improving your prompt…', 'loading');
+      try {
+        const res  = await fetch('/improve-prompt', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt }),
+        });
+        const data = await res.json();
+        if (data.error) { setStatus('Error: ' + data.error, 'error'); }
+        else { promptInput.value = data.improved_prompt; setStatus('✨ Prompt improved!', 'success'); }
+      } catch (err) { setStatus('Network error.', 'error'); }
+      finally {
+        btn.disabled = false;
+        btn.querySelector('span:last-child').innerHTML = 'Improve<br/>Prompt';
+      }
+    });
+
+    // ══════════════════════════════════════════
+    // GENERATE SINGLE IMAGE (sends settings)
+    // ══════════════════════════════════════════
+    genBtn.addEventListener('click', async () => {
+      playClickSound();   // play your real click sound
+      const prompt = promptInput.value.trim();
+      if (!prompt) { setStatus('Please enter a prompt.', 'error'); return; }
+
+      setGenerating(true);
+      setStatus('⚡ Generating your image…', 'loading');
+      resultArea.style.display = 'none';
+      variationsArea.style.display = 'none';
+      suggestionsBox.classList.remove('open');
+
+      const form = new FormData();
+      form.append('prompt',          prompt);
+      form.append('style',           styleSelect.value);
+      form.append('negative_prompt', negativeInput.value.trim());
+
+      // Append settings
+      const s = getSettings();
+      form.append('img_size',  s.img_size);
+      form.append('cfg_scale', s.cfg_scale);
+      form.append('steps',     s.steps);
+
+      try {
+        const res  = await fetch('/generate', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.error) {
+          setStatus('Error: ' + data.error, 'error');
+        } else {
+          currentImageUrl = data.image_url;
+          resultImg.src   = data.image_url + '?t=' + Date.now();
+          resultArea.style.display = 'block';
+          document.getElementById('btn-download').href = data.image_url;
+          document.getElementById('btn-share').style.display = navigator.share ? '' : 'none';
+          setStatus('✦ Image generated!', 'success');
+          resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } catch (err) { setStatus('Network error.', 'error'); }
+      finally { setGenerating(false); }
+    });
+
+    // ══════════════════════════════════════════
+    // GENERATE VARIATIONS
+    // ══════════════════════════════════════════
+    document.getElementById('variations-btn').addEventListener('click', async () => {
+      const prompt = promptInput.value.trim();
+      if (!prompt) { setStatus('Please enter a prompt first.', 'error'); return; }
+      const btn = document.getElementById('variations-btn');
+      btn.disabled = true; btn.textContent = '⏳ Generating 3 variations…';
+      setStatus('🎲 Generating 3 variations… this may take ~30s', 'loading');
+      variationsArea.style.display = 'none'; resultArea.style.display = 'none';
+
+      const form = new FormData();
+      form.append('prompt', prompt);
+      form.append('style',  styleSelect.value);
+      form.append('negative_prompt', negativeInput.value.trim());
+
+      try {
+        const res  = await fetch('/variations', { method: 'POST', body: form });
+        const data = await res.json();
+        if (data.error) { setStatus('Error: ' + data.error, 'error'); }
+        else {
+          variationsGrid.innerHTML = '';
+          data.image_urls.forEach((url, i) => {
+            const item = document.createElement('div');
+            item.className = 'variation-item';
+            item.innerHTML = `<img src="${url}?t=${Date.now()}" alt="Variation ${i+1}" loading="lazy" />
+                              <div class="variation-label">Variation ${i+1}</div>`;
+            variationsGrid.appendChild(item);
+          });
+          variationsArea.style.display = 'block';
+          setStatus(`✦ ${data.image_urls.length} variations generated!`, 'success');
+          variationsArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      } catch (err) { setStatus('Network error.', 'error'); }
+      finally { btn.disabled = false; btn.textContent = '🎲 Generate Variations (×3)'; }
+    });
+
+    // ══════════════════════════════════════════
+    // REUSE PROMPT
+    // ══════════════════════════════════════════
+    function reusePrompt(prompt, style) {
+      promptInput.value = prompt; styleSelect.value = style;
+      window.scrollTo({ top: 0, behavior: 'smooth' }); promptInput.focus();
+    }
+
+    // Standalone fallback (compatibility)
+    function improvePrompt() {
+      const prompt = promptInput.value.trim();
+      if (!prompt) { setStatus('Enter a prompt first!', 'error'); return; }
+      fetch('/improve-prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) })
+        .then(r => r.json())
+        .then(data => {
+          if (data.improved_prompt) { promptInput.value = data.improved_prompt; setStatus('✨ Prompt improved!', 'success'); }
+        }).catch(() => setStatus('Error improving prompt', 'error'));
+    }
+
+    // ══════════════════════════════════════════
+    // DELETE IMAGE
+    // ══════════════════════════════════════════
+    async function deleteImage(event, imageUrl, cardId) {
+      event.stopPropagation();
+      if (!confirm('Delete this image? This cannot be undone.')) return;
+      try {
+        const res  = await fetch('/delete-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image_url: imageUrl }) });
+        const data = await res.json();
+        if (data.success) {
+          const card = document.getElementById(cardId);
+          card.style.transition = 'opacity 0.3s, transform 0.3s';
+          card.style.opacity = '0'; card.style.transform = 'scale(0.9)';
+          setTimeout(() => card.remove(), 320);
+          showToast('🗑 Image deleted');
+        } else { showToast('Error: ' + (data.error || 'Could not delete')); }
+      } catch { showToast('Network error while deleting'); }
+    }
+
+    // ══════════════════════════════════════════
+    // SHARE / EXPORT
+    // ══════════════════════════════════════════
+    async function copyLink() {
+      if (!currentImageUrl) { showToast('Generate an image first'); return; }
+      try {
+        await navigator.clipboard.writeText(window.location.origin + currentImageUrl);
+        const btn = document.getElementById('btn-copy-link');
+        btn.classList.add('copied'); btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '🔗 Copy Link'; }, 2000);
+        showToast('🔗 Link copied!');
+      } catch { showToast('Could not copy — try manually'); }
+    }
+
+    async function shareImage() {
+      if (!currentImageUrl || !navigator.share) return;
+      try {
+        await navigator.share({ title: 'Prompt2Pixel — AI Image', text: 'Check out this AI-generated image!', url: window.location.origin + currentImageUrl });
+      } catch (err) { if (err.name !== 'AbortError') console.error(err); }
+    }
+  </script>
+  <!-- Real click sound — your WhatsApp audio file embedded -->
+  <audio id="click-sound" preload="auto">
+    <source src="data:audio/mpeg;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAbXA0MgBUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAG1wNDJpc29tAFRTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAAfAAAwfQAGBgYICAgKCgoMDAwPDw8PExMTHh4eLy8vOjo6OkRERE9PT1paWmJiYmtra2t0dHR+fn6JiYmWlpaWo6OjrKystra2w8PD0NDQ0N3d3ejo6PDw8Pf39/f5+fn7+/v9/f3///8AAAAATGF2YzYwLjMxAAAAAAAAAAAAAAAAJAVAAAAAAAAAMH3cxDGLAAAAAAAAAAAAAAAAAAAAAP/7EGQAD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABAkAACAAAALQDdyadJc4c4AoAWBGswVAQAhIAalY/L+aZJFhRomrOcSHuz/cgzhwacPgFg9TOs28mBpCdDQZodolhK9o//sQZCIP8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEWgCBAbvDoQubEIwwqGRhH4bd+JTDmGRUGQMxGghIiJvDBo7/7/uVKAfOON//2UscBoTZcIYRAXGbmZ4gh1lugXDQQXH/+xBkRA/wAABpAAAACAAADSAAAAEAAAGkAAAAIAAANIAAAARLnzeFsBZAygDRsTgRoGNSgHYwu8VZNkeXxHAfwiaApUCxwL7jsf/GAAAAIAAAAf/+Y///////////////////0b/ICP/7EGRmD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABAfU7KzMsOqKzMqr7DCSQAAAC4hhoPsz1+Evk9CoCQDCEEiDaAuoKFiS4XtTrAkIsBDZkEoPmSMkMu12GirjdhgDvDgE//sQZIgP8AAAf4AAAAgAAA/wAAABAAAB/gAAACAAAD/AAAAENstSVhhSl1Wn0LH1fqsbkQAPCydQAvwsO0Nh603SdQLjAoxZxhoyyjbvcmW+txALBS+HGQNNMYIwwYnD653ZlLwsoZ//+1BkqgAAAAB/hQAACAAAD/CgAAEBVAEYmAAAAAAAP8MAAABEnajt+gby7LHbRTlS2Y81FmLXaOXzxaMMGhTpSFTN9ExFbDWiS2LsLCFxwqGDh5ehJT2QZfQOUTAZA3jUmku5DzJlZIeXMWylui0iKDqJ1uGiJMPo7k/0SwSPU4UqZOu8Kir/Za49///g4CAPg4CAPgQ4ABMg8gzgAADMPMEGwEyAB+DCAwLICMHpLf9FehUFymjpcX/nGDh//l3jz2jB9CebRdfnWWR2eXZX//ugZPqABSlPyn4+gIAdySj0wIgAnyE/IfmcgADDBGY/BAAAS6oBCCAAA5XWMNS3wMCKQamGOWb3mgnZjQWIAM0UVNhLwSLGUBxWLAQGMrVzPy0wEBgQAqYBAcMAkYVAeYMhsYWgSBQBgwYAcIBEtiukwqARd7C0vSQAExG/XnI2pmIgPGFQIJ2iEC3dS8CAERPZExtzF9v60FrrKizgkCDK7VBNJEI/F0Htht3HaZS/rXmpw9Bz8R2M2IchuHEEjUIxLGBJVOm7NBT1a8xT4YAwAjAwEgUECYhgMBwqAZjICRimUJk6I6PwMAgzQDUsAaYAiIBjNMFRsMTQcMpwfqjoCAYA38IQKJgElDnmIgCmCBLmbJMkQlBUBTA0CXKa+rE9+WZtBapp+DhhoIIFAZQ8wEA1gT3PSCgTl5g+pyJyobv/+6B+5PLJdSW52nwtYZ2c+dwpMa2f4/+X///9iayomrWJaKKHh0KhIQACAC7H38dk1cExxGLuvKn2JhQdKZAlYYQ8AigFIgYMW3Mb1hjcE3FbACvuCuscIOjSbXA3iseVPLoE2/sWjz/hgUqgjD9y+3fx78YpuT9JFoXLOxiMO4/TuX4CktaIwHFonLPlDv+/9vOKc+tSfui/2vv7qhZp+7Fe3TvA5Cwi+Yt//+sv+te/////y27IkrHHf+3Xt9776rta7lur//vQZPcAChxfUf5vpICsKQoPzWCCJbk7Rf3OAAH9HOi/tbAErI/tKJkhET5RAABlcZmZWsYJn5zhXGpXIZzGJjQgmQgKCQsYWBIFHBmM2GExqawQpmc2BCmMWDwhCaNJIFDEpAMCIEedBlUpBBqMPCMwkFYEMFB0woBRGADCoUDAcFgOYKBKsBgICmQgevQyyVDEoRMQGM1cFjlIFMuo803AzfJzX8ii+TAjAICQHGEhyYZCJkwZlpDDYcBQaAgHMGAVQABAJNguELAoLBNKwSCVlBK95bct4q0tlBRABSIEmAQULBMwCBEkgsBTCgHMDiYWC5gIDhABQ6AoCrCFol7qayGYbtm80XYi1SHlGiEULwXhArj18H2EYETMk6E1rygIQHTA4bMgg0WGxhIAg0UGAQA1g0i2TRRBMWBlFkSAyX9LS5f////////+vyVtWgqLf9KAAEAkcAAKAFwQKGg6cdCOKiEY3ZkNazWppW7tBfylerWUMwhyoeiZalCakA7z9WIBqTU/Gl7BYDL0oYmCnxooWcElmPoTXYajXbUpltaGqku7vdXCt3GVU+G////6CehmQ3I1E4e//1vv7hqVw7Ypst3f5////+7Hef+6fPr8lkd1ckQRRAgh70r4kEDCAoi+QK0AhCCLNAJS7bvSiQK3VkEQAQui98vFpvSya/jFLFhyjd4MJI6AJkNEJNV9afMEJqis4yNUwIaAJQwV1Jdb0DEib1F9JVac9QrTN1kHKiRwuLzhVpKUNcVILTiqmYmo1QCDFtI6i3//+8gjRD7bKiuIBLAwCRA1xBZByl4QFgkWBPzgsdrRn/y/1HLf6y++gn/7jvLOoJABI4Doi1hkqCug4gX4cxGnYWOoEiU963mFuNDKmbrgJWB4ZoKtIs5evt0K9uM6S6x1efVkwDuCBNP9BZxrpnqBcNGmojYIUGp/QWSjHGjkziaLID3OWrrJM3MRnNziZLlpuZm/x9C7GZ6tbjEN/0G//u7LGgIE07/76ZPMAAACu1kUkZbqUTB1B9ekTz8jCHDqOMEyAAg4gAE1iBhinZ5J0ecM2TkU3NJIJ/n2Pd3icN9GfukOTn7vdf/KZkZjLAAALZBSA//7oGS4AAP5TthzDJPAJUAK3wAAAQ+tO2fsMa8BB48q+YaYqFxxEIDRzasPQMCgs8QCsEQdYEh1hoAZmc0LNgQtUQCJLmYLmeeBniYbEkqlD2UW23VSbO7VyV1pbLZZEmtMTFiauPf///DjVmYb1cS+ryifoSfWGNdgE4Hm2v+p4Bxrhc/EP+Ttb3Dg8n/32GI5WbEsxOM9Ha+W+//wPoeX0lqDaIfUZl4L2SxQ//9Q65c+F+qAAAAA0sykDntPRAmSk1HY/8N4sTACQohfp6SkvXGiXpI8ipyEJKpN8eFABwimDTWaEMHITlnJYCeLIfI3RAg6xdTnEzCoFGfRCRNyeD9DTBuz6vr/GljTe+GGlPr/t+Aj+JH8vIxoHlp+grTQQG+0RP/l2CpOo5+oSA//feQqoYgkgAUJSmMQQYcyBtnCRhAiOYJggKCRdLyrzYMpQ6Esj0mfV27kqiktLkDmSJY1dzs6RwUpsmOELKCKnpAjypJQjvfqyJq1M4BRSDP//IQFJlpb2v6yL6gw/a3umj4UDCBSCT7CD/+otF7c1NvQUAgQNaH+dF4QmpZkvMrf/jIQAErD4GEYMxWqrSuaDHdbctiU6iqT6z8K3FG2ySKnTfAcjXBMNitooCAJnZqIGNXIN/4rsUBAIUBAP80hflRUMFjt/QZk4/GA0EQQB+xQt9BELp4r///7oGT5ABTHTlfzL26wf0eaTmXoqA/tO2PsJhPBfKVrONSqKP+4sWH6/u27R3VeE0xtQaUAER4kyBS1BxvG7AZoxmGrlM86bTbiDjrDRocQBiSgAARonA9H06eukVWabvU5dpa7JALapp56ctbjjKMi89GjSW1IcwJGPB+s+eNDqDrXpIqOlwxSMj6mpKWSpqkMMUDyTqCfNz5kPQ66tTv1mUCLFq63/49T8RXv7mfEqcKIBnR8pSLv4p6ahsZBy6NOhxB53/7QmtPTudUXzuSqZaqd2ouMNBSKtBUQkarmkf/wujoj/+DASEb/7ysZAwDIag/bKv/iVQb/svFFEA4AAArCahpiAAICSggB4U2wQglXZEAJeICtmYQSY4WY4lGPAOJ5mxPKM72sOtIUd1nDIpNZgj4EJK2AroXk3iZJpianv1JnibAWFAaNmJtMlqWPkLQwLAxHiGaJn/k4RQ8Uj6ukcNSfIoTBfVUUwIEy+VMXoJPgNENEEkyZaolSUTpmopMWeBrJYj8sEUJFH+XCNK3LJN5XzMkAACAAAnjaNpx2YEkMAQ37DptEHY/+HtGioDCLerM3GPsq6oaSoaLERcUoDxoy5RPqJZ/yUUjguPICV/4pFIoAWW/+XIkYVAiLBoMjYM/KDYEsFz6CULv/+YziMcSq/bmnNTAkAAAUmma144xS9MMAw//7oGTwgAQVS1jzLGvQTqbrDjzCphNtOVHMPo2BgqWpeLSeYBdcs6NIXsBVM6Qyd1DSan4drCeBdS2o1+pUo2wrUg51b2hFkQ9wrhoOsAYDkUr3Xta1a67zMf//F+ZzCH45EMc5EucJtc67AwLC6IOGy3+rYUArb//94mGybWWW+f+nqdRdk/bw5x9yEQNB4rapmUgVoD7aLUVlVF10C7gOCWK9+opuxEwphCNasZiOX////v+lbGL3/2pn7R2OiAIoAAAIDDmWXfpYaH9DQ2Wd0wp2XicWY1r/ZlqxDq8XBSXDfKwUVBT5QFqoGAgJ0DNqAiWQxSlb/vM5bf5jGNhShjgLfDAQqFAW0N//6GOAgJfmWVEIAAAFhQS4yoLmI2mUU8ocPSIRl9gMor1uZcZtFzszp9L6ZmxOBXItVpmHZQ/kRo5Pp/JdjKn/fyD40u4QyAa2AoIgSKW/ky5KBIHCch6fp8708mKAVAaK7BmEKOzHqWYFQUNAsdArlRWteFQIYnBN7//9v+y2Tc///X6l5gseiQBjcuo8s00U3WkRmk03AiCZrMkDQPlkWR0jZecxCiTCgBLcMUVO+aeLcl0OwxKPK67///62qWbcGv3S4B440n3iMpmtsDQBYimBM9/KBJn7KxDGRML31+VBHkUDXKJq/YllQhAwAQBfZj+HAUYrAcWCijfGJv/7oGT8gRVXTtLzD9NwVelqHmECeBhNOz/M15hAfIkofYWcMB6o6LVKoS5Jan28S5FydcSifqEWIm78HOddjc9a1LKWnm6+U5v5hgYWOA0BUMuG7/lJRgKCIecbrQzqP+yAx9gdJETBs873CDIlP1bcvuPinJA+H//41ec////wmwgCq+Hca+eVIg3QXsatcYFl6KKVMzQDlzAsAKnU+J8xgxWdZW5iNRhubb63////+su5ZftSpZ059a3QpNr5AAAALBUgTPX0eTLekgj4shTo1X8nin/JhH3E26mQHPAAI+G0UIt1JtbNNhGoipAhRZ0wBXkZwsZULirPYdNwK+sfUMnJRSCCcHx2h+wTl2tNuex2H9i0MWI+zpmXXH3l27MzNsOY0iixgIEqtnrtvVaV1aX7tNEXdtf//n3d/////WccKgqcDsU5zt8YB8VvfSTsjZTNzzMSUDrBAUEGWpMZRCTIYKWLep3gW+pw7Vjn////71SWP5udgmTULAaAAAA3ABPFt1/lrfz+/9zlRp/E6i////eVKvcs8a1DHTvapodprJXc/N3XZFzuIAInxCwas8iDAQwFBb4CyDwCIadpMcOQhOi7NI/uHHkHliDREyXLyZIziQV7lPUt00/DBekLuLQAQAHl53etPnY5S//yH7qTYNFNAwaA/OYmLNtnFHyvl+H//7/Wd//7kGT+ABVXTtHzNNYQH0L6PzAjeBRpO0fMs5MApozl/PBuFbP////6Ry2rQHjrvJKlvL9xvCAFoqBsX5ca1Da4D14Lypxq4ssjbODDjldHl1NKX/////+ALFmEp3alcAFAAAAIcP9/ZaAoHsyIpmfNVHbZr/rNR/JMLJ/y8tnQAGRUEAAZ2DjERDKYRWPAzmNVxdYsusKlegkU3RFdZiC986V31HBjbNerbRFsQqQZN37TyCOvcsUYQdersbav8OSNlrWwMwZK9EkLJURZffWPdjUeKoMRFTMEgchkUYZVBqpUhTnt0ExaVrn2v//+he9RtypnPu8P/+V68xbkWX76YpY/0XeB3SEoaZieaY7mE1TpouxEFDnjgSH3BTBWgaQyWVWAVi////w/aqSftHysZ3S3Nn4AA72M5E5Tmw+X2iXBzyHAjgjrKP/wga76mnd2EkJhAAAECIa6CBQ0EFCKmT1BILtCEEaCYGoWle/SwMtcinpoFeVTFTm6zlvKktmZfa+kxu4WH/Hop7G19XVPbpItHrEzhYCHNK3+4zGG7v/7kGTxABTgS9T7Bs2gIMMJ3ywNhBaJMUnsM1hAdwvnvPCZdDJaa8EGnirBpR2HZe/QKtEiXMlP////0NJXRxZO23I/Rf//jfh1xIE7/YZMXDXNnpBFV5BUGPCIRIBnr2UcsLzit+njT6sViYXLmmNElPP///vIxRgkCp5lKUtQgJvAAABaYoDXSXgOIVIY+GEdkRuru9D/2EKC431G1FMZLEiigW6PKC0SZrHjeBJ9gQddKxAiuG4jWDwpHET47ggYBdEdSZIPNHxqNH2qlQoiIf+ZPG3bIUU4pJb//mO3IBeQRKTyFTjkmh2MspKDChsyxdqEWcuf//3lmZe+DvsWZDrmsK/bGsafsoqgZKx+QX6DMqnDkB2JV6lWX0P/RSWNPwu8hAGvlhxNOSG5///8INptZg4DKMN0nGQoZEQEuYgIgBkjSCGorpEoYJF+6vprfBHV0PNMk44T8st3///tg+n/3oqaIVzbAAAKhR1uDo4GUJEQaEYoQRc0gKAowMkbVpBQG0Ruzqb+DHlBY+rFUZF3UDrHERGhhJCWVXHFzv/7kGToAQVWS9J7It6AIGMKHzBtORPdN0vML03AoAgn/BQ8qN0qq9RPpYvD///zUzxZPMAhyeo+dgs7s9e7SSyAZuK0NPb+7Xlz7yiEXp+JUMPzDuRiE1n/Z2zt34HhhnECVXHMaUcavStVlZYLDQ2LVWEPw8YIDIUca43d4jBAEuVuj4EDM3db9yHk//ghn6HhYBioJlLIInD8gp/uf1ocQWgAAAApQRR9OLDgkiBwx2yypYOLMPoIXHhv////yLyoMEfuey6gFPAAEgDFVrJiAMiS/IBKTZaPERNZ+zZkyeUbXUpVbQvqkFy4vodyJbky92FWsnN/7vwCW07r92z/2jCKeX01gnwOTx6VAzCAo1u/N8FTZCtkluSTdn5TKlK3+BAIvxnjmKhVGq4wQMMeFlSjQXG3TdgLBBlJOYyGrvdB/23LwLPMACAcLJ8P8taG0EKFyE4aFCsUakFSZpNnBZRf6bZ8BZUywFQVYijOnoFwYwkIJQxOKJtRWa/v41oelrYHncl9Hid6eiUWzqcqkmZlxFOAAnc3McK9GWiwFv/7oGTdgRW2TdJ7KdRQJwEqDz8JIBmRPUPsM2+BDBll/YPl/HVS5JQEQmE65GSkjVqptgZ1Na9P////KiQVP//////+oxeS3Ms86ZUikiW5F3GvxtqXavzMyacVTUgAABH8xsZEIpgSbiqvRNUXRFNI1HKQZC+MrttpnxpF9aLncaO91M79ND7XFb3HWg7C2IFqwG8LqNddg7wSud6akb/OGpRRNinI7LbFAuR1NwZPS9rtmpBY0KLDFWvIvUHBUclrdgACBABDl6MMxAFIIgtWLrs4oQseBxI0YQ1rE2iw0BQtcGPAw2IihqjJqgZ1zLXmvchdhWxww4CVQgs8f5u7XRIeYZAXChRCASbv4SthsogZASTBXYa8zmbAggFJGzT/XJeqBv+Yv0Wf0tTPWseUNbkf3U01TWABgABSElAgxgSASNFBJB0DEgnvrNyDv/9c6v///joLRYTGpZ15n5e44EGAMPMRS7ICeaggaiHyasOlmiY7ZC6ym67Yk0tpHfYG865O/Yz+c5GIkqrDkES3K1TfELNqwxCR6tF8N1EXEz5iWRpwM5RAMTXO4zLGLNJLUNQYAxVm5kIYklKBT80alBk1wDAMuIgDXGehWMA5YcTEirX3YXLYHgYQEPOrJiLMkqi6StypAuIhJcmzOU1p7Eey+Q8Dpz2X4h2ZAgmYABpZSpMoOAs7ef/7oGTZgQbfT1D7G9YgKoYaHzQHpBllPUPMa3HAhYLpPMekSH0Elbd6YrK78oU4jsui2928sdZJG29ct859TP8FW83s/dyHNgABQAH7FgEVt8Lmrxoq4YDUlK1f//IGhG//6jX8zNu3ZSQAAEdBE1PcwJfkKBLUpZgRJfwxlVem+X+WbVdFeEiiZb1HOHJB1sk9Wld+nwjbZpV35Xv7VNuarxqil6pbGLRiI+XPjFqfehgkcgZ6HulTO2zIvSOdEQOYKBQqbjy+AsegKBAwEWZatiIwQ5UETwMJGFRx6HsWlDwUZkLxxHkwUfMXC1LpSOGpgI5Q3MV9vKyFp7Kn8S8T4l8CmBiKUaXawj9XHBF9GB8aZ/q+rOfAZgsBx48s/bnVS7O3rfJeFijO/Yo9Xs3sAKP2QAABXaejYTAiySwbAtAwBDc2oh5SOQzPf+9ogseBsN13Sf/q/mMfmfUqNRLHB6IgOz3mc90NH4ADANeWemeERF69tFk6IRGf20Z4IEM//73dxGHg5Pfqcq5Y0MQC0xwheJiFBiAb2B4ktQgxNNcrsUSrcoCa5bzZFLn/g7TYKa/LK0D40Lq0l/cxjnh2IzrY5bTN3aVduryEpV5p8nl6zFasght6oblzyuC1tlzJnKAxghAlmMqU2DsD1RM4cdCHiQYIKpmWMSDERBWSzxuSvk9SZsKTqP/7sGTTARZNTtHzG36wXChZv2VGfxpROz/MZ1qA+JmpPPQJmCALoUEBxw8TZeDF4PSjQRcN4QBVQWFFHGBAMyA9HFXSq5hhZpl4KJPy/q5FZkmqVg71M/UtZi3Fny8mAlxUidS7VDl8zLa2HzmUanqHkNQzjjU/6/c6WKugAvniIuArYX2/Bcj9dYfuyn1I6cZXwBPpJ1ev9Pq//bn9A7dwjNIDAK6KxEUUruCcQjvUA+T4QSr+zd3oh1oAAAAUcJFSVMdiX+LFAFwHBDxRdguki0vVZ4YTnJWwUshZHcSVk3y4WtPLVK9QOtlzWW2n1kvTcqkXWUxRro8xTT00Jy3jQlUOErlqISnonIW1cEQjFAbuxNhyawMPN4FDWPu4vpPZDsDBSQcGHHIeZai9mfjgiqhCE3OKIO7ZMxW5ySwBclV+tHb/26tJG3DbktRb7FpBBb1PtDiAWCH+r8HnQaxLUdK/v5s9sNPQIAAE6IkOUEIHtidWs0Ts56+KKeJjXHbZFTTcebg2GRdp85VVsbEITCL5G5qa4dWEPaiaJT79EwVOPRPgVBNpFriUTSa0QQOQDjUrKpNlrOsX/p1+5GV/iJN0H1tc6y0C7e7P63efEBRiEjDwCge6DCL6WY6IXIPPDCNcT2Zg7bNGBUPHylrKucsq0TVNclB0HCWKdW6cV5LjspHW1uqTbvz0hZUjPOpkUSpsID4lIlx4Ai5JOxWGUSa067MsYlSuU18aKzmTKAq5gqUs+VfZrX315eocptyf/Tortpr/6rui/uUtwlU3GaWJM6d6nv5t1VW7o/IAqgVIKoHsFgpBjg5yliET226N//uwZN6BFXNE0PsszMBmqEoPYCumUdURP+wnFQHQoea9gWKcz9ZVIrTVYg3Vm0H/ALi1d82oUmX+Qf0R8Jr//cz+vRy3KrcmpupT01dluXZmUxmGoKc9K0ArTXXC2LNSqvp+bEarynn/jFbX/uYsd5ytIpuM4XbeG5TDtjdDev7u/tyGj2oAECIgPFOgbDCHUeQjGgNAU24uDOJ6uBPv271q9EpcBG2iHSdvCbrRXHzu3ZyM+nA0Qlne2vc9/9blrUrmx5Xmv7AUz/UgOJesis02kKGRcrFA5tBFcrRQ5mc++GRr5qWNFqEa6ZhRS3/v//bEZrWAEBEXaAA5WiUCh3VQI2uKyNZS3WRQBfiTcMfk7ysmc3a+1qR2LzjBu2OsvXcCm+apIidPmmtR/8XUxo9+UsM/keTv+UGukbSZvYcYDZ+YJTaLrlvFOt93w7v6iXHTaS7GGyW/t3/7pd/rSCgIIMYG8eyGkhy3jcWbMEkS9XUZ7DBmMQYqjJ4EQJRatFn1V5V5EqhQs1K47ebdqXVIxIa95995cv6pQ8g/qM//JI/41pNSAnLlniJumVyBaH6WZVw3/Vd/2vNt5OrJSFY2qne//d3Zi59GAABdslkkF00jIpijXXigmZW0WRuJy+AMVp8IjwW9K0dGxxPin2b1Tk5WrctrLVcK1zEZMdz9w9Y5HxDQ8u+Gv/cRCOxrnmBPIAoAnHohQ/DcPJaSxsJRz0qbD2Xw4pvgmRvcZm1bnmJCF51Was7t3t2mv9IAAC63cUClu4ZLUKhbxdqo4HZRMM+X5caUu/7Vp33lz08SsEok3YZnVxdQlplAjN/7ZtX/+5BE+YADeUNP+wlEcmooCh9gy6RNdRNB7DEsgc2iaH2GLXQxFLWjHhnGqjP8eQTYatz/iVH/6leTnRuVSx9nonpNDwshyWUtTlzhvLK3tpLtJudw/v/////8Qb3duxWlVHWrapKWVdhjsaIj9ie/u3tyXresgIChHSjxihJbVLgtg8kpc6WpGww2l9BtCWRKJJQuchQqbip6K1tkIIarmHGMY6EVf2JnfLjwr/0mGnzQeyyi0KnEjSP//+Jxt9ylQaMJTVzWXLJPhI9kjK3cZcIUMlg9p0rT7WAirgqhwyj3c4KgZs9/kBl5WCP3nPKsNQREuMeGaKl4+HxKJnEKqSVXbNcQr5a/VGVRpfODz92bX8oKziuC4DhL4YwFQLGjcqNFjnkWFC3kBTS1rdWNNKVQgOSqiov1///f//ReatN6UWrXqnIs+tM+rEJfJqj+yuknaP4Yp6PMzLu7d6/UYAAyL0JtCTVtK/SBeWDX7rNjonHsYPiVZo9EwCpNsVAJDmml/+26z+fPAkD/LbluylEQSTQ3JFeVIpna1oiOQwT/+6Bk24EEJkTPewbFOlVnmf9hh1hSnSMx7CcU4cuh5v2FybyBKi235kXDI4Ym47iPRKRAQGyEIwUYVktEK7///j5HlpKjHDxSQdJRD0S7q5qaqlOvCQACKwGGNEUBMgU1GwqC4N2WW1hmkRhPaSB68YbDTzvdtjMRFifbeUDca0u1/XiQa9TLU8KlENU0r5w4Gt+/9hMuFqu7//+Lhwhw4fyiytkayVC/yezlsCGVrHYq8bcXdZYoovJ+W0gttbP85////+2qMdqyaHXKg2cjkMxerIm5R9x4R2jfCQX8qGL2u1+t8mXuqqZmVNuwAAALgWEsUVCPQQVS2o2S1sWwQuexzcBiTigIxJvJIEQ0VdlMndsxc9tRPy6priFkWOhH9ODrvv/gvtWJf/8//7Nyx32nsRfSDnuZCvR+mQ34EcEDLi7tsneVWdOZ/oy6kfdWz/P/////a2nOuyGPsyhml5Vk9iNIaRGROPyegyW39VZHf/ylVVXNSxr6AJKsRrZfCXgUZkWoEs4uHH4o6MASbl9nDbhEWbqyUF4+uWe/p7FtleZOgTzLu79TLhm7i/73RQo+/99ssnjXP33dyKUsFxFv4dgCmLKuWoGDhhwi1Aa1lIYEHFSEXUtFMydh/eLa8///////bVIzuGM1qu62eG4EiE9TQiWOG7UtlL1WrlSend0dLz///+7/+7BE3YEUwknL+wbFOI1pGY9heG8TTUcv7CcPopqo5P2Ml9R3L/3/1XmFh4aAfoAVH6BJy06mI4TnG3daIMOhcHSP8W9iNJF2DRLuo49cZk1rkrnJflM2//W/uUsvz3n+NSesSWJy1+8o3R/ambLSL0rtf8/ZZuNC5z8Lr1vC6iDyuFeoC18o1LBBZRnrFjBiNo9Hs2RhZtZomC9TD22LPM7m6VPnD+///3//aBTB5trDmvGjTqmynoaTXWi5sYZAv1gjYocnqij0VHlf//hSmpiZmGVOiAAAJIXUWDByGJRUKCb5rkvf+BXKiOP4xd0rktlVfCsdnuTbn28jXTM/9tX329c2jlzMsLOYel2VSE1b7ycheVwxo4eLOLj0TZ9jKEjXdSKYegiU5BBw0EhYdCpr1u8sGgsNNJaJbr1hq9p5v//////1ZY0k3p/Gl5z+EUgKFQ5II7SM2geKQmCpbJK0jl2FNe3/////4/U9wybu6q6h59BAAQw1B/g/0ACNgSxvG0YcR6hyMVmTMiVTylRG9VFzCQJZRaxFYo3hT/13tu0q9/0364pPPA2rcfWIryPbV+9anCBrXvd430jPHEdeJ35Y7KcimzJG4EUEvC17BoHBeGHCeAUgRIkh9RC/+w1Bmj0GDGHJEtNjQehmXxEmBw0cumBQVcompsaP/5hhyIh2Z2VX8CFYiVFGohh3Vf+E0uFrsh1l+oBwpJfJYO7yVJPQ5V3ZeWtVdXZfuxtaZa3rMzaeTgGPXH45tZOc0Id1mWDU/U6oJY9LSaIq/2nx2il0TnEdGfVQhDY0PzKcK0L9seBwQNNlz8PG4sJ7Z//7sETRAQUCUEr7DMv6kkoJjz8N8RM1KSfsMxUiMyQlvPTipBxp+/////KmxFB8oJquotfGtE4TNxxpr4PvMurT7cKVSqLwLPU2r/w9DUzcxExJt4iAABhJB8jIAGB1KNlaUi6gMHWe/JfPRKxafJukzjS/q0nDfUp5VQF5JZmfEyyYGLljvVWxNVmHosDIM27nUoih+nugp3mC1ZYoOrAwZ/UgxPIuxZDc3helr6Vy5mWMW7+PO4c////+mkir/jvuo5NLjFIlEX4aBqlqyixdh6vWi1cEk/D0NZmYmZiVjxkAABtLgcTCeR5I2BCP5GzuJ5f9FrSXWzqf/JnkxzAk2mQlrzt9myU6miDbDqEz/fzfF3PISvM0UVahLZf2k5lE5iNS9QVwWIrxYqNYjTd2jwwy5nrgqA9/90ss/////VWu2fKZhECPq/F2pygydaSalNyZr/uvWzKSxMTEzNI/ZAAAHumqUKoZzNOM7dLEos/DtRTHURf1aT3w6v3XPboxaPzmfiUcdiaP/hz+O08qxUPrZ68ZINRHXaiw6GsWm45Q3K4LX4o/EJ6PJZPy4rrIGHtSgJig/bapKy6KqdvW7T39+5TQ/////+FWbbbsTYZAbAalPNyV/HKh2ZxhyPyKM3qtubuWcpZiIiHaGn1ITBYLFIrCmmRqzUpa9Jj/P/l2rF4z9/3AgqKx+xwUoJLevrPiDpbFbR2uRjfwbP5I4rf/ps6+FHagbLa1WOjWk4BbhvoYPEUYrwsSs3OqELU66ja3LDg6///3ETKqtc9C/H4ytT5LzSqDV0L3uO91SsTbQ8RDvCz6SM4QlLLpoT0e//uwRMuBFAFIS3noxUqOqSlfYRipTx0jK+wZ9SIiJGU89OKkVERmKSJv7OlgYj9YHcXRKiSLycc9lUUKWY3J5iYUF8lLY76pof3zz+agVRfq4h2Dcz1aIDZWLTLiJix5/psveopIG4uqBoJKKCP8xNnjJFlOW+C/38z+5MVu////9sQbP6ylzJW4ZZy+Apc271c7YymJVOYVZirz9CqXiHdml2/iAAALwJksDINAfAryaB9ZuTO68JB8bwPUGQJQjcC0bfNOMQtSqKtVPHGlD33ryhWEHfWNX6LGZKt0karhD6gseZuKIagDCLge9R3GSulljbs+LLuv///rZc7otZbl814792rYbHEYVd8QnLpQ2ImZeZla+TAAAyiTBUqPOM2F5gYK6fQI2YC6hI9xaWH5PcQFnhsu5ReqpuULLAS4i+Jmg5MH4l/lBURBn+NUYNWIOHLlhVyy45LqTksJonyWZih5EItYtyLXakkRKB82Nb///9e1uW8rlNRXDKsWabOCJApSry0TAJM/Ek1URDtKz/8MEwFsP0XFCGDdIeZvT/5tOxPY81RHamd4i+f/ZbUSUZqrKEEb0omBpjjb6pFi8f6q1c8XHF9NvtZXLthdqxSEmQqVjgvpGask/n//////rExPWLMqq1rCv6Yi/+aiJiAeImJ+iGIQIpWeJlofUvu9QnE6yguHqLBgOktp7n/3y3lFx9tXR2EaPGBCX1f52jr/8rXa3/o6+XmZWMkfR9FMursgTABuklFoFgaYRgBOi3az/////q1nEPKM3acxASoEU5w3aqDqh3dmVoeN7QAAIAbkDDyhzdRP9zJy0ZX/+6BE6gETnEbKeYh82nuo6W89D6kMlRkt563xoaMkJby3p8QB0AGJq/6j9rmB/HEpIwXNoQwj2CJHqRKht/41B3f43tHptx3c7obEhquqSVOPoQQyoc0REv////Ii7KHIcChDj7xofc+ZRLwzO7tO84AAFTrRY+MH6T19S+tZiZ+X1SokrUAWJ4/JJ398yxS7Wp+fY+lpZnBYSR1DsIlHSgoHeGocK/5Vdf/DklSkp5lijMyKBXoYFqLU4kgtZHbIl2ZnXNNS6/////8rhazCrvH26WrJiM6b8YzbeKS7eHZWBWdh7oGwHEEBMFwLIuIdKfSYl2QeHu//eYh1rUoezEZC+sNfNtFWz/xZBNt76U0fsd8R9in04mWiIxdD2Lsqf+mW1KoHPe0u31c7vvcN99+xwMkIAgRPihqKvX/+xnicXT+DaA/tfcq7mvGCUEhMcYJu9f0j0ensReaQtVre01af/Oc3xv/5w0trmoYlpVPpcn9PYiD8V5+jQflx8NjjzPb6////x7jLUOoWuVJLGhczjJQ3kaqawCC6jfMNgSJGCFS6/3/qQLPEiPP/s1U4R1sYLopI2Cg+nwySQ0/5cBb+eZmKy+x6KLkQFYIPksYOkzlf///4nga8mkyYsH06/iso7uzMAPDzXgAAIA4VikoNTnsjfkSpUwgeoLR151fpfQwkGWnschH/+5BE/oAS6UFKeQ9HinTpCU89b38JvQEp5Rj6iamiJLSXpyUXCsA8mhwtHDmDQ5HvanShR09ldR/iOrl1CeFMLnRyjgPoPixwrNNj////qeEKjKNxgE1KFUyO1AEFtG+hBAYAaFATDB/zv3qRPnu//zlUi2VrA41NTw09R8m5ysf94mZ6p/PdV5Y6NN0t/3rv+Wt1sAkg39BYE4dVgYct6/6+j/+2i3KQ1boVY9Y1Byf2zNPy6m8e95b/F777qeaZKKRTeeeEpZppvt/9sec9zWGwdDl9VRAABfMIf//eZmcn08yCkQUqKcgAAAAEYQAEIQhD//Qz/////qVAoCJKkSzv/+hMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+3BE94ACX0ZI6QVCcFzIeT8d6PEG/MkhpQzWwQ+gpHRVnxhVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQRO+P8I4wxKggM/YcRdj9BAJOAAAB/gAAACAAAD/AAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+xBk3Y/wAAB/gAAACAAAD/AAAAEAAAH+AAAAIAAAP8AAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EGTdj/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQZN2P8AAAaQAAAAgAAA0gAAABAAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=" type="audio/mpeg" />
+  </audio>
+
+</body>
+</html>

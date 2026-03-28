@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt2Pixel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0f;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── Preloader — shown while Spline is loading ── */
+    #preloader {
+      position: fixed;
+      inset: 0;
+      background: #0a0a0f;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease;
+    }
+    #preloader.hidden { opacity: 0; pointer-events: none; }
+
+    .pre-spinner {
+      width: 28px; height: 28px;
+      border: 2px solid rgba(241, 225, 148, 0.15);
+      border-top-color: #F1E194;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+
+    /* ── Full-screen Spline — covers all sizes ── */
+    .spline-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      min-width: 100vw;
+      min-height: 100vh;
+      z-index: 0;
+      border: none;
+    }
+
+    /* ── Thin overlay ── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 15, 0.10);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════
+       TEXT CARD — pinned to bottom-center
+       so it never overlaps the robot
+    ══════════════════════════════════════ */
+    .content {
+      position: fixed;
+      bottom: 2.8rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(24px);
+      z-index: 10;
+      text-align: center;
+      width: max-content;
+      max-width: 90vw;
+
+      /* frosted glass pill */
+      background: rgba(10, 10, 15, 0.52);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(241, 225, 148, 0.13);
+      border-radius: 18px;
+      padding: 1.4rem 3rem 1.2rem;
+
+      opacity: 0;
+      transition: opacity 0.9s ease, transform 0.9s ease;
+    }
+    .content.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Mobile: move card higher so it clears any bottom chrome */
+    @media (max-width: 600px) {
+      .content {
+        bottom: 1.8rem;
+        padding: 1.1rem 1.6rem 1rem;
+        width: calc(100vw - 2.4rem);
+        max-width: 100%;
+        border-radius: 14px;
+      }
+    }
+    @media (max-width: 360px) {
+      .content { bottom: 1.2rem; }
+    }
+
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2rem, 5vw, 3.4rem);
+      letter-spacing: -0.02em;
+      color: #F1E194;
+      text-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.98),
+        0 0 28px rgba(241, 225, 148, 0.55),
+        0 0 55px rgba(241, 225, 148, 0.22);
+      animation: textPulse 3s ease-in-out 1s infinite alternate;
+    }
+
+    @keyframes textPulse {
+      from { text-shadow: 0 2px 8px rgba(0,0,0,0.98), 0 0 28px rgba(241,225,148,0.5),  0 0 55px rgba(241,225,148,0.2); }
+      to   { text-shadow: 0 2px 8px rgba(0,0,0,0.98), 0 0 42px rgba(241,225,148,0.75), 0 0 80px rgba(241,225,148,0.4); }
+    }
+
+    .tagline {
+      margin-top: 0.35rem;
+      font-size: clamp(0.6rem, 1.5vw, 0.76rem);
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: rgba(241, 225, 148, 0.48);
+    }
+
+    /* ── Spinner row ── */
+    .spinner-wrap {
+      margin-top: 1.1rem;
+      display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+    }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid rgba(241, 225, 148, 0.12);
+      border-top-color: #F1E194;
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner-label {
+      font-size: 0.63rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: rgba(241, 225, 148, 0.36);
+    }
+    .dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+    @keyframes dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+    }
+
+    /* ── Thin gold progress bar at bottom ── */
+    .progress-bar {
+      position: fixed;
+      bottom: 0; left: 0;
+      height: 2px;
+      width: 0%;
+      background: linear-gradient(90deg, #5B0E14, #F1E194, #5B0E14);
+      z-index: 20;
+      transition: width 6s linear;
+    }
+    .progress-bar.run { width: 100%; }
+
+    /* ── Corner accents ── */
+    .corner {
+      position: fixed; z-index: 5;
+      width: 36px; height: 36px;
+      opacity: 0;
+      transition: opacity 0.6s ease 0.5s;
+      pointer-events: none;
+    }
+    .corner.visible { opacity: 1; }
+    .corner--tl { top: 1.5rem; left: 1.5rem;   border-top: 1px solid rgba(241,225,148,0.22); border-left:  1px solid rgba(241,225,148,0.22); }
+    .corner--tr { top: 1.5rem; right: 1.5rem;  border-top: 1px solid rgba(241,225,148,0.22); border-right: 1px solid rgba(241,225,148,0.22); }
+    .corner--bl { bottom: 1.5rem; left: 1.5rem;  border-bottom: 1px solid rgba(241,225,148,0.22); border-left:  1px solid rgba(241,225,148,0.22); }
+    .corner--br { bottom: 1.5rem; right: 1.5rem; border-bottom: 1px solid rgba(241,225,148,0.22); border-right: 1px solid rgba(241,225,148,0.22); }
+
+    @media (max-width: 480px) { .corner { display: none; } }
+  </style>
+</head>
+<body>
+
+  <!-- Preloader covers everything until Spline fires onload -->
+  <div id="preloader">
+    <div class="pre-spinner"></div>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="progress-bar" id="progress"></div>
+
+  <!-- Spline 3D (interactive — no pointer-events:none) -->
+  <iframe
+    id="spline-frame"
+    class="spline-bg"
+    src="https://my.spline.design/nexbotrobotcharacterconcept-7nhS1X0GEmv0Br3jmpuOoYmW/"
+    frameborder="0"
+    width="100%"
+    height="100%"
+    onload="onSplineLoaded()">
+  </iframe>
+
+  <div class="overlay"></div>
+
+  <!-- Corner accents -->
+  <div class="corner corner--tl" id="c1"></div>
+  <div class="corner corner--tr" id="c2"></div>
+  <div class="corner corner--bl" id="c3"></div>
+  <div class="corner corner--br" id="c4"></div>
+
+  <!-- Text card — bottom-center, below the robot -->
+  <div class="content" id="content">
+    <div class="logo-text">✦ Prompt2Pixel</div>
+    <p class="tagline">Turn words into worlds</p>
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+      <span class="spinner-label">Loading studio<span class="dots"></span></span>
+    </div>
+  </div>
+
+  <script>
+    var started = false;
+
+    function onSplineLoaded() {
+      if (started) return;
+      started = true;
+
+      // Hide the preloader
+      var pre = document.getElementById('preloader');
+      pre.classList.add('hidden');
+
+      // Small settle pause, then reveal text + corners
+      setTimeout(function () {
+        document.getElementById('content').classList.add('visible');
+        ['c1','c2','c3','c4'].forEach(function(id) {
+          document.getElementById(id).classList.add('visible');
+        });
+
+        // Kick off the progress bar (matches 6s redirect)
+        setTimeout(function () {
+          document.getElementById('progress').classList.add('run');
+        }, 80);
+
+        // Redirect after 6s + 0.5s fade
+        setTimeout(function () {
+          document.body.style.transition = 'opacity 0.5s ease';
+          document.body.style.opacity = '0';
+          setTimeout(function () {
+            window.location.href = '/login';
+          }, 500);
+        }, 6000);
+
+      }, 350);
+    }
+
+    // Fallback: if Spline takes more than 5s, proceed anyway
+    setTimeout(function () {
+      if (!started) onSplineLoaded();
+    }, 5000);
+  </script>
+
+</body>
+</html>

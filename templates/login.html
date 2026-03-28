@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Prompt2Pixel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet" />
+  <style>
+    /* ══════════════════════════════════════════
+       CSS VARIABLES
+    ══════════════════════════════════════════ */
+    :root, [data-theme="dark"] {
+      --bg:            #0a0a0f;
+      --surface:       #111111;
+      --border:        rgba(241, 225, 148, 0.15);
+      --border-strong: rgba(241, 225, 148, 0.4);
+      --primary:       #5B0E14;
+      --primary-hover: #7a1c24;
+      --accent:        #F1E194;
+      --text:          #ffffff;
+      --muted:         #b6b6ba;
+      --error:         #ef4444;
+      --glow:          0 0 24px rgba(241, 225, 148, 0.2);
+      --glow-strong:   0 0 40px rgba(241, 225, 148, 0.35);
+      --radius:        14px;
+      --logo-from:     #F1E194;
+      --logo-to:       #c8ab4e;
+    }
+
+    [data-theme="light"] {
+      --bg:            #faf8f0;
+      --surface:       #ffffff;
+      --border:        rgba(91, 14, 20, 0.18);
+      --border-strong: rgba(91, 14, 20, 0.5);
+      --primary:       #5B0E14;
+      --primary-hover: #7a1c24;
+      --accent:        #5B0E14;
+      --text:          #1a0a0c;
+      --muted:         #7a6060;
+      --error:         #dc2626;
+      --glow:          0 0 24px rgba(91, 14, 20, 0.12);
+      --glow-strong:   0 0 40px rgba(91, 14, 20, 0.22);
+      --logo-from:     #5B0E14;
+      --logo-to:       #7a1c24;
+    }
+
+    /* ══════════════════════════════════════════
+       RESET
+    ══════════════════════════════════════════ */
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+    }
+
+    /* ══════════════════════════════════════════
+       PAGE FADE-IN — Feature 3: smooth page transition
+    ══════════════════════════════════════════ */
+    @keyframes pageFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      overflow-x: hidden;
+      /* Feature 3: 0.6s fade-in on page load */
+      animation: pageFadeIn 0.6s ease both;
+    }
+
+    /* ══════════════════════════════════════════
+       3D SPLINE BACKGROUND
+    ══════════════════════════════════════════ */
+    .spline-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      min-width: 100vw;
+      min-height: 100vh;
+      z-index: 0;
+      border: none;
+      filter: brightness(0.85);
+    }
+
+    .spline-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(10, 10, 15, 0.30);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* ══════════════════════════════════════════
+       FEATURE 1: ROBOT REACTION — golden flash
+       Triggered by adding .robot-flash to body
+    ══════════════════════════════════════════ */
+    @keyframes robotFlashAnim {
+      0%   { opacity: 0; }
+      20%  { opacity: 1; }
+      60%  { opacity: 0.6; }
+      100% { opacity: 0; }
+    }
+
+    /* Invisible overlay that flashes gold on click */
+    .flash-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      background: rgba(241, 225, 148, 0.4);
+      opacity: 0;
+    }
+
+    /* When .robot-flash is added to body, animate the overlay */
+    body.robot-flash .flash-overlay {
+      animation: robotFlashAnim 0.55s ease forwards;
+    }
+
+    /* ══════════════════════════════════════════
+       FEATURE 2: FULL-SCREEN LOADING OVERLAY
+       Shown after form submit, before redirect
+    ══════════════════════════════════════════ */
+    @keyframes loaderFadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    @keyframes loaderSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Pulse on loading text */
+    @keyframes loaderPulse {
+      0%, 100% { opacity: 0.6; }
+      50%       { opacity: 1; }
+    }
+
+    .loading-overlay {
+      display: none;               /* hidden by default */
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      background: #0a0a0f;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      animation: loaderFadeIn 0.35s ease both;
+    }
+
+    .loading-overlay.active {
+      display: flex;               /* JS adds .active to show it */
+    }
+
+    /* Circular golden spinner */
+    .loader-ring {
+      width: 56px; height: 56px;
+      border: 3px solid rgba(241, 225, 148, 0.12);
+      border-top-color: #F1E194;
+      border-radius: 50%;
+      animation: loaderSpin 0.85s linear infinite;
+    }
+
+    /* Smaller inner ring for depth */
+    .loader-ring-inner {
+      width: 36px; height: 36px;
+      border: 2px solid rgba(91, 14, 20, 0.4);
+      border-bottom-color: #5B0E14;
+      border-radius: 50%;
+      animation: loaderSpin 1.1s linear infinite reverse;
+      position: absolute;
+    }
+
+    .loader-rings {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loader-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #F1E194;
+      animation: loaderPulse 1.4s ease-in-out infinite;
+    }
+
+    .loader-dots::after {
+      content: '';
+      animation: dotsAnim 1.5s steps(4, end) infinite;
+    }
+    @keyframes dotsAnim {
+      0%  { content: ''; }
+      25% { content: '.'; }
+      50% { content: '..'; }
+      75% { content: '...'; }
+    }
+
+    /* Thin progress bar at bottom of loader */
+    .loader-progress {
+      position: fixed;
+      bottom: 0; left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #5B0E14, #F1E194, #5B0E14);
+      width: 0;
+      transition: width 1.8s ease;
+    }
+    .loader-progress.run { width: 100%; }
+
+    /* ══════════════════════════════════════════
+       THEME TOGGLE
+    ══════════════════════════════════════════ */
+    .btn-theme-corner {
+      position: fixed; top: 1rem; right: 1rem;
+      background: rgba(10, 10, 15, 0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.4rem 0.6rem;
+      cursor: pointer; font-size: 1rem; line-height: 1;
+      color: var(--muted); z-index: 10;
+      transition: border-color 0.3s, color 0.3s, box-shadow 0.3s;
+    }
+    .btn-theme-corner:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px rgba(241, 225, 148, 0.25);
+    }
+
+    /* ══════════════════════════════════════════
+       LOGIN CARD — Glassmorphism
+    ══════════════════════════════════════════ */
+    @keyframes cardFadeUp {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      position: relative;
+      z-index: 2;
+      background: rgba(20, 20, 30, 0.5);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius);
+      padding: 2.8rem 2.2rem 2.2rem;
+      box-shadow:
+        0 0 0 1px rgba(241, 225, 148, 0.07),
+        0 8px 32px rgba(0, 0, 0, 0.55),
+        0 0 60px rgba(91, 14, 20, 0.18);
+      animation: cardFadeUp 0.8s ease both;
+    }
+
+    /* Gold shimmer line at top */
+    .login-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 10%; right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(241,225,148,0.35), transparent);
+      border-radius: 1px;
+    }
+
+    /* ══════════════════════════════════════════
+       LOGO
+    ══════════════════════════════════════════ */
+    .login-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 1.7rem;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, var(--logo-from), var(--logo-to));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center; margin-bottom: 0.35rem;
+    }
+
+    .login-subtitle {
+      text-align: center; font-size: 0.73rem;
+      color: rgba(182, 182, 186, 0.7);
+      letter-spacing: 0.12em; text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+
+    /* ══════════════════════════════════════════
+       FORM FIELDS
+    ══════════════════════════════════════════ */
+    .field { margin-bottom: 1.2rem; }
+
+    label {
+      display: block; font-size: 0.68rem;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 0.5rem;
+      transition: color 0.3s;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      font-family: 'DM Mono', monospace; font-size: 0.9rem;
+      color: var(--text);
+      background: rgba(10, 10, 15, 0.6);
+      border: 1px solid rgba(91, 14, 20, 0.6);
+      border-radius: 9px; padding: 0.8rem 1.05rem;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #F1E194;
+      box-shadow: 0 0 10px rgba(241, 225, 148, 0.3);
+      background: rgba(10, 10, 15, 0.75);
+    }
+    .field:focus-within label { color: rgba(241,225,148,0.8); }
+
+    [data-theme="light"] input[type="text"],
+    [data-theme="light"] input[type="password"] {
+      background: rgba(255,255,255,0.85); color: #1a0a0c;
+    }
+
+    /* ══════════════════════════════════════════
+       ERROR MESSAGE
+    ══════════════════════════════════════════ */
+    .error-msg {
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.35);
+      border-radius: 9px; color: var(--error);
+      font-size: 0.78rem; padding: 0.65rem 1rem;
+      margin-bottom: 1.2rem; text-align: center;
+      animation: cardFadeUp 0.4s ease both;
+    }
+
+    /* ══════════════════════════════════════════
+       LOGIN BUTTON
+    ══════════════════════════════════════════ */
+    .btn-login {
+      width: 100%; padding: 0.95rem;
+      background: linear-gradient(135deg, #5B0E14, #7a1c24);
+      color: #F1E194; border: none; border-radius: 9px;
+      font-family: 'Syne', sans-serif; font-weight: 700;
+      font-size: 0.9rem; letter-spacing: 0.12em; text-transform: uppercase;
+      cursor: pointer; margin-top: 0.6rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      box-shadow: 0 4px 18px rgba(91, 14, 20, 0.45);
+    }
+    .btn-login:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(241,225,148,0.4), 0 6px 24px rgba(91,14,20,0.5);
+      background: linear-gradient(135deg, #6e1018, #8e2230);
+    }
+    .btn-login:active { transform: scale(0.98); transition-duration: 0.1s; }
+
+    /* ══════════════════════════════════════════
+       HINT
+    ══════════════════════════════════════════ */
+    .login-hint {
+      margin-top: 1.6rem; font-size: 0.68rem;
+      color: rgba(182,182,186,0.55); text-align: center; line-height: 1.9;
+    }
+    .login-hint span { color: rgba(241,225,148,0.75); }
+
+    /* ══════════════════════════════════════════
+       FEATURE 4: AI ASSISTANT POPUP
+       Bottom-right, appears after 2 seconds
+    ══════════════════════════════════════════ */
+    @keyframes popupSlideIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .ai-popup {
+      position: fixed;
+      bottom: 1.5rem; right: 1.5rem;
+      z-index: 20;
+      background: rgba(17, 17, 17, 0.92);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(241, 225, 148, 0.25);
+      border-radius: 12px;
+      padding: 0.9rem 1.2rem;
+      max-width: 220px;
+      /* Gold soft glow */
+      box-shadow: 0 0 18px rgba(241, 225, 148, 0.15), 0 4px 20px rgba(0,0,0,0.5);
+      /* Hidden initially */
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .ai-popup.visible {
+      opacity: 1;
+      pointer-events: auto;
+      animation: popupSlideIn 0.45s ease both;
+    }
+
+    .ai-popup-text {
+      font-size: 0.75rem;
+      color: #F1E194;
+      line-height: 1.55;
+      letter-spacing: 0.02em;
+    }
+
+    .ai-popup-close {
+      position: absolute; top: 0.4rem; right: 0.6rem;
+      background: none; border: none;
+      color: rgba(241,225,148,0.4); font-size: 0.9rem;
+      cursor: pointer; padding: 0.1rem 0.3rem;
+      transition: color 0.2s;
+      line-height: 1;
+    }
+    .ai-popup-close:hover { color: #F1E194; }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 480px) {
+      .login-card { padding: 2.2rem 1.4rem 1.8rem; max-width: 100%; border-radius: 16px; }
+      .login-logo { font-size: 1.4rem; }
+      .ai-popup { bottom: 1rem; right: 1rem; max-width: 180px; }
+    }
+    @media (max-width: 360px) {
+      .login-card { padding: 1.8rem 1rem 1.4rem; }
+      .btn-login { font-size: 0.82rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ Feature 1: Flash overlay ══ -->
+  <!-- Invisible until body gets .robot-flash class -->
+  <div class="flash-overlay" id="flash-overlay"></div>
+
+  <!-- ══ Feature 2: Full-screen loading overlay ══ -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loader-rings">
+      <div class="loader-ring"></div>
+      <div class="loader-ring-inner"></div>
+    </div>
+    <div class="loader-text">
+      Entering AI Studio<span class="loader-dots"></span>
+    </div>
+    <div class="loader-progress" id="loader-progress"></div>
+  </div>
+
+  <!-- Spline 3D robot background (unchanged) -->
+  <iframe
+    class="spline-bg"
+    src="https://my.spline.design/r4xbot-ieF4y2fLUILX7hAywmXuUepK/"
+    frameborder="0"
+    width="100%"
+    height="100%">
+  </iframe>
+
+  <!-- Dark overlay so card stays readable -->
+  <div class="spline-overlay"></div>
+
+  <!-- Theme toggle -->
+  <button class="btn-theme-corner" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+
+  <!-- ══ LOGIN CARD ══ -->
+  <div class="login-card">
+    <div class="login-logo">✦ Prompt2Pixel</div>
+    <p class="login-subtitle">Sign in to access the studio</p>
+
+    {% if error %}
+    <div class="error-msg">⚠ {{ error }}</div>
+    {% endif %}
+
+    <!-- Feature 3: onsubmit triggers loader before form posts -->
+    <form method="POST" action="/login" id="login-form" onsubmit="handleLogin(event)">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username"
+               placeholder="Enter username" autocomplete="username" required />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               placeholder="Enter password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn-login" id="sign-in-btn">Sign In →</button>
+    </form>
+
+    <p class="login-hint">
+      Default credentials:<br />
+      Username: <span>admin</span> · Password: <span>admin123</span>
+    </p>
+  </div>
+
+  <!-- ══ Feature 4: AI Assistant Popup ══ -->
+  <div class="ai-popup" id="ai-popup">
+    <button class="ai-popup-close" onclick="closePopup()" title="Dismiss">✕</button>
+    <div class="ai-popup-text">
+      🤖 Hi! Need help logging in?<br />
+      <span style="opacity:0.65; font-size:0.68rem;">Use: admin / admin123</span>
+    </div>
+  </div>
+
+  <!-- ══ JAVASCRIPT ══ -->
+  <script>
+    /* ═══════════════════════════════════════════
+       THEME — persisted in localStorage
+    ═══════════════════════════════════════════ */
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙' : '☀️';
+    }
+    function toggleTheme() {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('p2p-theme', next);
+      applyTheme(next);
+    }
+    (function () { applyTheme(localStorage.getItem('p2p-theme') || 'dark'); })();
+
+    /* ═══════════════════════════════════════════
+       FEATURE 1 + 2 + SOUND: handleLogin
+       Called by form's onsubmit
+    ═══════════════════════════════════════════ */
+    function handleLogin(e) {
+      // Don't prevent default — let the form submit naturally.
+      // We just run effects first, then let the browser POST.
+
+      // ── Feature 1: Robot reaction — golden flash ─────
+      triggerRobotFlash();
+
+      // ── Sound effect: play click sound ────────────────
+      playClickSound();
+
+      // ── Feature 2: Show the loading overlay ──────────
+      // Use a tiny timeout (80ms) so the flash can start rendering
+      // before the browser focuses on submitting the form.
+      setTimeout(function () {
+        showLoader();
+      }, 80);
+
+      // Allow the form to submit naturally (no e.preventDefault())
+      // The browser will POST and redirect — the loader just shows
+      // while the server responds.
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 1: Robot Reaction — golden flash
+    ═══════════════════════════════════════════ */
+    function triggerRobotFlash() {
+      var body = document.body;
+      // Remove if already there (rapid clicks)
+      body.classList.remove('robot-flash');
+      // Force a reflow so the animation re-triggers
+      void body.offsetWidth;
+      body.classList.add('robot-flash');
+
+      // Clean up after animation completes (0.55s)
+      setTimeout(function () {
+        body.classList.remove('robot-flash');
+      }, 600);
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 2: Full-screen loader
+    ═══════════════════════════════════════════ */
+    function showLoader() {
+      var overlay  = document.getElementById('loading-overlay');
+      var progress = document.getElementById('loader-progress');
+
+      overlay.classList.add('active');
+
+      // Kick off the thin progress bar
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          progress.classList.add('run');
+        });
+      });
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 2 (SOUND): Click sound
+       Uses the Web Audio API to generate a crisp
+       click tone — no external file needed.
+    ═══════════════════════════════════════════ */
+    function playClickSound() {
+       var audio = new Audio("/static/click.mp3");
+       audio.volume = 0.4;
+       audio.play();
+}
+   
+
+    /* ═══════════════════════════════════════════
+       FEATURE 1 (VOICE): AI Voice Welcome
+       Uses SpeechSynthesis API — no external API
+    ═══════════════════════════════════════════ */
+    function speakWelcome() {
+      if (!window.speechSynthesis) return;
+
+      var msg        = new SpeechSynthesisUtterance('Welcome to Prompt2Pixel');
+      msg.rate       = 0.92;      // slightly slower = more "AI" feel
+      msg.pitch      = 0.85;
+      msg.volume     = 0.75;
+
+      // Try to pick a deeper / neutral voice if available
+      var voices = window.speechSynthesis.getVoices();
+      var preferred = voices.find(function (v) {
+        return v.lang === 'en-US' && (v.name.includes('Male') || v.name.includes('Google') || v.name.includes('David'));
+      });
+      if (preferred) msg.voice = preferred;
+
+      // SpeechSynthesis may need a short delay on some browsers
+      setTimeout(function () {
+        try {
+          window.speechSynthesis.speak(msg);
+        } catch (err) { /* silently ignore autoplay block */ }
+      }, 600);
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 4: AI Assistant Popup
+       Appears 2 seconds after page load
+    ═══════════════════════════════════════════ */
+    function closePopup() {
+      document.getElementById('ai-popup').classList.remove('visible');
+    }
+
+    // Show popup after 2 seconds
+    setTimeout(function () {
+      document.getElementById('ai-popup').classList.add('visible');
+    }, 2000);
+
+    // Auto-dismiss popup after 8 seconds
+    setTimeout(function () {
+      var popup = document.getElementById('ai-popup');
+      if (popup.classList.contains('visible')) {
+        popup.style.transition = 'opacity 0.5s';
+        popup.style.opacity    = '0';
+        setTimeout(function () { popup.classList.remove('visible'); }, 500);
+      }
+    }, 8000);
+
+    /* ═══════════════════════════════════════════
+       INIT — voice welcome on FIRST user interaction
+       Browsers block audio on page load (autoplay policy).
+       We wait for the first mousemove OR touchstart,
+       speak once, then remove the listeners.
+    ═══════════════════════════════════════════ */
+    var voiceSpoken = false;
+
+    function trySpeak() {
+      if (voiceSpoken) return;
+      voiceSpoken = true;
+
+      // Remove both listeners immediately so it only fires once
+      document.removeEventListener('mousemove',  trySpeak);
+      document.removeEventListener('touchstart', trySpeak);
+      document.removeEventListener('keydown',    trySpeak);
+
+      if (!window.speechSynthesis) return;
+
+      function doSpeak() {
+        var msg   = new SpeechSynthesisUtterance('Welcome to Prompt2Pixel');
+        msg.rate  = 0.92;
+        msg.pitch = 0.85;
+        msg.volume = 0.85;
+
+        var voices = window.speechSynthesis.getVoices();
+        var preferred = voices.find(function (v) {
+          return v.lang.startsWith('en') &&
+                 (v.name.includes('Male') || v.name.includes('Google') ||
+                  v.name.includes('David') || v.name.includes('Daniel'));
+        });
+        if (preferred) msg.voice = preferred;
+
+        window.speechSynthesis.cancel(); // clear any queued utterances
+        window.speechSynthesis.speak(msg);
+      }
+
+      // Voices may not be loaded yet — handle both cases
+      var voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        doSpeak();
+      } else {
+        window.speechSynthesis.addEventListener('voiceschanged', function onV() {
+          window.speechSynthesis.removeEventListener('voiceschanged', onV);
+          doSpeak();
+        });
+      }
+    }
+
+    // Listen for ANY of these — whichever comes first
+    document.addEventListener('mousemove',  trySpeak, { once: true });
+    document.addEventListener('touchstart', trySpeak, { once: true });
+    document.addEventListener('keydown',    trySpeak, { once: true });
+  </script>
+</body>
+</html>
